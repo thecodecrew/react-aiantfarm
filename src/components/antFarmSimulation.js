@@ -73,12 +73,19 @@ export class AntFarmSimulation {
     }
 
     createAnt() {
+    const directionToFood = Math.atan2(
+        this.food.y - this.nest.y,
+        this.food.x - this.nest.x
+    );
+
         return {
             id: this.nextAntId++,
             x: this.nest.x,
             y: this.nest.y,
             state: FORAGING,
             speed: 0.42 + Math.random() * 0.18,
+            heading: directionToFood,
+            wanderAngle: 0,
         };
     }
 }

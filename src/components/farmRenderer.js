@@ -37,20 +37,20 @@ const drawSoilBed = (ctx, width, height, soilGrains) => {
     });
 };
 
-const drawTunnel = (ctx, nest, food) => {
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(nest.x, nest.y);
-    ctx.lineTo(food.x, food.y);
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = 'rgba(43, 29, 18, 0.72)';
-    ctx.lineWidth = 8;
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(35, 24, 16, 0.82)';
-    ctx.lineWidth = 5;
-    ctx.stroke();
-    ctx.restore();
-};
+// const drawTunnel = (ctx, nest, food) => {
+//     ctx.save();
+//     ctx.beginPath();
+//     ctx.moveTo(nest.x, nest.y);
+//     ctx.lineTo(food.x, food.y);
+//     ctx.lineCap = 'round';
+//     ctx.strokeStyle = 'rgba(43, 29, 18, 0.72)';
+//     ctx.lineWidth = 8;
+//     ctx.stroke();
+//     ctx.strokeStyle = 'rgba(35, 24, 16, 0.82)';
+//     ctx.lineWidth = 5;
+//     ctx.stroke();
+//     ctx.restore();
+// };
 
 const drawNest = (ctx, nest) => {
     const entranceRadius = 16;
@@ -93,7 +93,7 @@ export const createSoilGrains = (width, height) =>
 
 export const renderFarm = (ctx, { width, height, nest, food, ants, soilGrains }) => {
     drawSoilBed(ctx, width, height, soilGrains);
-    drawTunnel(ctx, nest, food);
+    //drawTunnel(ctx, nest, food);
     drawNest(ctx, nest);
     drawFood(ctx, food);
     drawAnts(ctx, ants);

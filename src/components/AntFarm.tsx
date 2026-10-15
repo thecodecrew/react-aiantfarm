@@ -17,7 +17,7 @@ const getCanvasDisplaySize = (settingsOpen: boolean) => {
 export const Ants: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const simulationRef = useRef<AntFarmSimulation | null>(null);
-    const [speedMultiplier, setSpeedMultiplier] = useState(1);
+    const [speedMultiplier, setSpeedMultiplier] = useState(3);
     const [maxAnts, setMaxAnts] = useState(5);
     const [foodAmount, setFoodAmount] = useState(80);
     const [settingsOpen, setSettingsOpen] = useState(false);
