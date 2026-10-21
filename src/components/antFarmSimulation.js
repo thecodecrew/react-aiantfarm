@@ -8,6 +8,8 @@ const RETURNING = 'returning';
 const SEARCHING = 'searching';
 const WAITING = 'waiting';
 const TUNNEL_POINT_SPACING = 4;
+const TUNNEL_LIFETIME_MS = 120_000;
+const TUNNEL_CLEANUP_INTERVAL_MS = 5_000;
 
 export class AntFarmSimulation {
     ants = [];
@@ -20,6 +22,7 @@ export class AntFarmSimulation {
     tunnelEstablished = false;
     needsNewTunnel = false;
     scoutAntId = null;
+    nextTunnelCleanupTime = 0;
 
     constructor(width, height, maxAnts = 5, foodAmount = 80) {
         this.width = width;
@@ -72,9 +75,9 @@ export class AntFarmSimulation {
                 if (hasReachedFood(ant, this.food)) {
                     this.recordTunnelPoint(ant, true);
                     ant.state = RETURNING;
-                    ant.route = this.scoutPath;
-                    ant.routeIndex = this.scoutPath.length - 2;
-                    ant.routeDirection = -1;
+                    ant.route = null;
+                    ant.routeIndex = undefined;
+                    ant.routeDirection = 1;
                     this.collectFood();
                 }
             } else if (ant.state === FORAGING) {
@@ -95,11 +98,7 @@ export class AntFarmSimulation {
                     this.collectFood();
                 }
             } else if (ant.state === RETURNING) {
-                if (!ant.route && ant.isScout && !this.tunnelEstablished) {
-                    ant.route = this.scoutPath;
-                    ant.routeIndex = this.scoutPath.length - 2;
-                    ant.routeDirection = -1;
-                } else if (!ant.route) {
+                if (!ant.route) {
                     this.planTunnelRoute(ant, this.nest);
                 }
 
@@ -112,6 +111,11 @@ export class AntFarmSimulation {
         });
 
         this.finishNewSearchIfReady();
+
+        if (this.simulationTime >= this.nextTunnelCleanupTime) {
+            this.tunnelNetwork.pruneExpired(this.simulationTime, TUNNEL_LIFETIME_MS);
+            this.nextTunnelCleanupTime = this.simulationTime + TUNNEL_CLEANUP_INTERVAL_MS;
+        }
     }
 
     render(ctx) {
@@ -166,10 +170,21 @@ export class AntFarmSimulation {
         const startId = this.tunnelNetwork.connectNearest({ x: ant.x, y: ant.y });
         const destinationId = this.tunnelNetwork.connectNearest(destination);
         const route = this.tunnelNetwork.findRoute(startId, destinationId);
-        if (!route) return;
+
+        if (!route) {
+            ant.route = [{ x: ant.x, y: ant.y }, { x: destination.x, y: destination.y }];
+            ant.routeIndex = 1;
+            ant.routeDirection = 1;
+            return;
+        }
 
         if (Math.hypot(route[0].x - ant.x, route[0].y - ant.y) > 0.5) {
             route.unshift({ x: ant.x, y: ant.y });
+        }
+
+        const lastWaypoint = route[route.length - 1];
+        if (Math.hypot(lastWaypoint.x - destination.x, lastWaypoint.y - destination.y) > 0.5) {
+            route.push({ x: destination.x, y: destination.y });
         }
 
         ant.route = route;
@@ -204,7 +219,7 @@ export class AntFarmSimulation {
 
     antReturned(ant) {
         if (ant.isScout && !this.tunnelEstablished && !this.needsNewTunnel) {
-            this.tunnelNetwork.addPath(this.scoutPath);
+            this.tunnelNetwork.addPath(this.scoutPath, this.simulationTime);
             this.tunnelEstablished = true;
             this.ants.forEach((waitingAnt) => {
                 if (waitingAnt.state === WAITING) {

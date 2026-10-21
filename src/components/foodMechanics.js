@@ -1,5 +1,6 @@
 const FOOD_RADIUS = 6;
 const FOOD_PICKUP_RADIUS = 2;
+const FOOD_SCENT_RADIUS = 60;
 
 export const createFoodSource = (width, height, nest, maxAmount = 80, nearby) => {
     const minDistanceFromNest = nest.radius + 100;
@@ -25,6 +26,7 @@ export const createFoodSource = (width, height, nest, maxAmount = 80, nearby) =>
         y,
         radius: FOOD_RADIUS,
         pickupRadius: FOOD_PICKUP_RADIUS,
+        scentRadius: FOOD_SCENT_RADIUS,
         amount: maxAmount,
         maxAmount,
     };
@@ -34,4 +36,4 @@ export const hasReachedFood = (ant, food) =>
     food.amount > 0 && Math.hypot(ant.x - food.x, ant.y - food.y) < food.pickupRadius;
 
 export const hasDetectedFood = (ant, food) =>
-    food.amount > 0 && Math.hypot(ant.x - food.x, ant.y - food.y) < 28;
+    food.amount > 0 && Math.hypot(ant.x - food.x, ant.y - food.y) < food.scentRadius;

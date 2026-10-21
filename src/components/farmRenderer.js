@@ -45,22 +45,22 @@ const drawTunnel = (ctx, tunnelSegments, scoutPath, established) => {
     ctx.lineJoin = 'round';
     ctx.strokeStyle = established ? 'rgba(43, 29, 18, 0.82)' : 'rgba(43, 29, 18, 0.58)';
     ctx.lineWidth = 8;
+    ctx.beginPath();
     tunnelSegments.forEach(({ start, end }) => {
-        ctx.beginPath();
         ctx.moveTo(start.x, start.y);
         ctx.lineTo(end.x, end.y);
-        ctx.stroke();
-        ctx.strokeStyle = 'rgba(35, 24, 16, 0.82)';
-        ctx.lineWidth = 5;
-        ctx.stroke();
-        ctx.strokeStyle = established ? 'rgba(43, 29, 18, 0.82)' : 'rgba(43, 29, 18, 0.58)';
-        ctx.lineWidth = 8;
     });
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(35, 24, 16, 0.82)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
 
     if (scoutPath.length > 1) {
         ctx.beginPath();
         ctx.moveTo(scoutPath[0].x, scoutPath[0].y);
-        scoutPath.slice(1).forEach((point) => ctx.lineTo(point.x, point.y));
+        for (let index = 1; index < scoutPath.length; index += 1) {
+            ctx.lineTo(scoutPath[index].x, scoutPath[index].y);
+        }
         ctx.strokeStyle = 'rgba(43, 29, 18, 0.58)';
         ctx.lineWidth = 8;
         ctx.stroke();
@@ -86,6 +86,16 @@ const drawNest = (ctx, nest) => {
 };
 
 const drawFood = (ctx, food) => {
+    ctx.beginPath();
+    ctx.arc(food.x, food.y, food.scentRadius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(134, 239, 172, 0.04)';
+    ctx.fill();
+    ctx.setLineDash([4, 6]);
+    ctx.strokeStyle = 'rgba(134, 239, 172, 0.28)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
     ctx.fillStyle = food.amount > 0 ? '#22c55e' : '#4b5563';
     ctx.beginPath();
     ctx.arc(food.x, food.y, food.radius * 2, 0, Math.PI * 2);
