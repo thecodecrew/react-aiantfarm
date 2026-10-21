@@ -35,3 +35,47 @@ export const moveAntToward = (ant, target, distance) => {
     ant.x += Math.cos(ant.heading) * distance;
     ant.y += Math.sin(ant.heading) * distance;
 };
+
+export const moveAntAlongTunnel = (ant, tunnel, distance, direction) => {
+    if (tunnel.length < 2 || distance <= 0) return false;
+
+    let routeIndex = ant.routeIndex ?? (direction > 0 ? 1 : tunnel.length - 2);
+    let remainingDistance = distance;
+
+    while (remainingDistance > 0 && routeIndex >= 0 && routeIndex < tunnel.length) {
+        const waypoint = tunnel[routeIndex];
+        const deltaX = waypoint.x - ant.x;
+        const deltaY = waypoint.y - ant.y;
+        const distanceToWaypoint = Math.hypot(deltaX, deltaY);
+
+        if (distanceToWaypoint <= remainingDistance) {
+            ant.x = waypoint.x;
+            ant.y = waypoint.y;
+            remainingDistance -= distanceToWaypoint;
+            routeIndex += direction;
+        } else {
+            ant.x += (deltaX / distanceToWaypoint) * remainingDistance;
+            ant.y += (deltaY / distanceToWaypoint) * remainingDistance;
+            remainingDistance = 0;
+        }
+    }
+
+    ant.routeIndex = routeIndex;
+    return direction > 0 ? routeIndex >= tunnel.length : routeIndex < 0;
+};
+
+export const moveAntSearching = (ant, width, height, distance) => {
+    ant.heading ??= Math.random() * Math.PI * 2;
+    ant.heading += (Math.random() - 0.5) * 0.12;
+
+    const margin = 30;
+    const nextX = ant.x + Math.cos(ant.heading) * distance;
+    const nextY = ant.y + Math.sin(ant.heading) * distance;
+
+    if (nextX < margin || nextX > width - margin) ant.heading = Math.PI - ant.heading;
+    if (nextY < margin || nextY > height - margin) ant.heading = -ant.heading;
+
+    ant.x = clamp(ant.x + Math.cos(ant.heading) * distance, margin, width - margin);
+    ant.y = clamp(ant.y + Math.sin(ant.heading) * distance, margin, height - margin);
+};
+

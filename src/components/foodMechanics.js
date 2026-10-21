@@ -32,3 +32,6 @@ export const createFoodSource = (width, height, nest, maxAmount = 80, nearby) =>
 
 export const hasReachedFood = (ant, food) =>
     food.amount > 0 && Math.hypot(ant.x - food.x, ant.y - food.y) < food.pickupRadius;
+
+export const hasDetectedFood = (ant, food) =>
+    food.amount > 0 && Math.hypot(ant.x - food.x, ant.y - food.y) < 28;

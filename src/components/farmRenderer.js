@@ -37,20 +37,23 @@ const drawSoilBed = (ctx, width, height, soilGrains) => {
     });
 };
 
-// const drawTunnel = (ctx, nest, food) => {
-//     ctx.save();
-//     ctx.beginPath();
-//     ctx.moveTo(nest.x, nest.y);
-//     ctx.lineTo(food.x, food.y);
-//     ctx.lineCap = 'round';
-//     ctx.strokeStyle = 'rgba(43, 29, 18, 0.72)';
-//     ctx.lineWidth = 8;
-//     ctx.stroke();
-//     ctx.strokeStyle = 'rgba(35, 24, 16, 0.82)';
-//     ctx.lineWidth = 5;
-//     ctx.stroke();
-//     ctx.restore();
-// };
+const drawTunnel = (ctx, tunnel, established) => {
+    if (tunnel.length < 2) return;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(tunnel[0].x, tunnel[0].y);
+    tunnel.slice(1).forEach((point) => ctx.lineTo(point.x, point.y));
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = established ? 'rgba(43, 29, 18, 0.82)' : 'rgba(43, 29, 18, 0.58)';
+    ctx.lineWidth = 8;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(35, 24, 16, 0.82)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    ctx.restore();
+};
 
 const drawNest = (ctx, nest) => {
     const entranceRadius = 16;
@@ -68,7 +71,7 @@ const drawNest = (ctx, nest) => {
 const drawFood = (ctx, food) => {
     ctx.fillStyle = food.amount > 0 ? '#22c55e' : '#4b5563';
     ctx.beginPath();
-    ctx.arc(food.x, food.y, food.radius, 0, Math.PI * 2);
+    ctx.arc(food.x, food.y, food.radius * 2, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = '#d1fae5';
@@ -78,7 +81,7 @@ const drawFood = (ctx, food) => {
 
 const drawAnts = (ctx, ants) => {
     ants.forEach((ant) => {
-        ctx.fillStyle = ant.state === 'foraging' ? '#ffffff' : '#ef4444';
+        ctx.fillStyle = ant.state === 'returning' ? '#ef4444' : ant.state === 'waiting' ? '#a3a3a3' : '#ffffff';
         ctx.fillRect(ant.x, ant.y, 2, 2);
     });
 };
@@ -91,9 +94,9 @@ export const createSoilGrains = (width, height) =>
         color: Math.random() > 0.5 ? 'rgba(221, 184, 132, 0.2)' : 'rgba(30, 20, 13, 0.22)',
     }));
 
-export const renderFarm = (ctx, { width, height, nest, food, ants, soilGrains }) => {
+export const renderFarm = (ctx, { width, height, nest, food, ants, tunnel, tunnelEstablished, soilGrains }) => {
     drawSoilBed(ctx, width, height, soilGrains);
-    //drawTunnel(ctx, nest, food);
+    drawTunnel(ctx, tunnel, tunnelEstablished);
     drawNest(ctx, nest);
     drawFood(ctx, food);
     drawAnts(ctx, ants);
