@@ -37,7 +37,23 @@ export const moveAntToward = (ant, target, distance) => {
 };
 
 export const moveAntAlongTunnel = (ant, tunnel, distance, direction) => {
-    if (tunnel.length < 2 || distance <= 0) return false;
+    if (tunnel.length === 0 || distance <= 0) return false;
+
+    if (tunnel.length === 1) {
+        const waypoint = tunnel[0];
+        const distanceToWaypoint = Math.hypot(waypoint.x - ant.x, waypoint.y - ant.y);
+        if (distanceToWaypoint <= distance) {
+            ant.x = waypoint.x;
+            ant.y = waypoint.y;
+            ant.routeIndex = direction > 0 ? 1 : -1;
+            return true;
+        }
+
+        ant.x += ((waypoint.x - ant.x) / distanceToWaypoint) * distance;
+        ant.y += ((waypoint.y - ant.y) / distanceToWaypoint) * distance;
+        ant.routeIndex = 0;
+        return false;
+    }
 
     let routeIndex = ant.routeIndex ?? (direction > 0 ? 1 : tunnel.length - 2);
     let remainingDistance = distance;

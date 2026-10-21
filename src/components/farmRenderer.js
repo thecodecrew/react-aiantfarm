@@ -37,21 +37,38 @@ const drawSoilBed = (ctx, width, height, soilGrains) => {
     });
 };
 
-const drawTunnel = (ctx, tunnel, established) => {
-    if (tunnel.length < 2) return;
+const drawTunnel = (ctx, tunnelSegments, scoutPath, established) => {
+    if (tunnelSegments.length === 0 && scoutPath.length < 2) return;
 
     ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(tunnel[0].x, tunnel[0].y);
-    tunnel.slice(1).forEach((point) => ctx.lineTo(point.x, point.y));
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.strokeStyle = established ? 'rgba(43, 29, 18, 0.82)' : 'rgba(43, 29, 18, 0.58)';
     ctx.lineWidth = 8;
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(35, 24, 16, 0.82)';
-    ctx.lineWidth = 5;
-    ctx.stroke();
+    tunnelSegments.forEach(({ start, end }) => {
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(35, 24, 16, 0.82)';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.strokeStyle = established ? 'rgba(43, 29, 18, 0.82)' : 'rgba(43, 29, 18, 0.58)';
+        ctx.lineWidth = 8;
+    });
+
+    if (scoutPath.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(scoutPath[0].x, scoutPath[0].y);
+        scoutPath.slice(1).forEach((point) => ctx.lineTo(point.x, point.y));
+        ctx.strokeStyle = 'rgba(43, 29, 18, 0.58)';
+        ctx.lineWidth = 8;
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(35, 24, 16, 0.82)';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+    }
+
     ctx.restore();
 };
 
@@ -94,9 +111,9 @@ export const createSoilGrains = (width, height) =>
         color: Math.random() > 0.5 ? 'rgba(221, 184, 132, 0.2)' : 'rgba(30, 20, 13, 0.22)',
     }));
 
-export const renderFarm = (ctx, { width, height, nest, food, ants, tunnel, tunnelEstablished, soilGrains }) => {
+export const renderFarm = (ctx, { width, height, nest, food, ants, tunnelSegments, scoutPath, tunnelEstablished, soilGrains }) => {
     drawSoilBed(ctx, width, height, soilGrains);
-    drawTunnel(ctx, tunnel, tunnelEstablished);
+    drawTunnel(ctx, tunnelSegments, scoutPath, tunnelEstablished);
     drawNest(ctx, nest);
     drawFood(ctx, food);
     drawAnts(ctx, ants);

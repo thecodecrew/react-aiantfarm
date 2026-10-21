@@ -1,6 +1,7 @@
 import { moveAntAlongTunnel, moveAntToward, moveAntSearching } from './antMovement.js';
 import { createFoodSource, hasReachedFood, hasDetectedFood } from './foodMechanics.js';
 import { createSoilGrains, renderFarm } from './farmRenderer.js';
+import { TunnelNetwork } from './tunneling.js';
 
 const FORAGING = 'foraging';
 const RETURNING = 'returning';
@@ -14,7 +15,8 @@ export class AntFarmSimulation {
     lastSpawnTime = 0;
     simulationTime = 0;
     maxAnts = 5;
-    tunnel = [];
+    tunnelNetwork = new TunnelNetwork();
+    scoutPath = [];
     tunnelEstablished = false;
     needsNewTunnel = false;
     scoutAntId = null;
@@ -26,7 +28,8 @@ export class AntFarmSimulation {
         this.nest = { x: width * 0.2, y: height * 0.72, radius: 20 };
         this.food = createFoodSource(width, height, this.nest, foodAmount);
         this.soilGrains = createSoilGrains(width, height);
-        this.tunnel = [{ x: this.nest.x, y: this.nest.y }];
+        this.scoutPath = [{ x: this.nest.x, y: this.nest.y }];
+        this.tunnelNetwork.getOrCreateNode(this.nest);
     }
 
     setMaxAnts(value) {
@@ -69,19 +72,39 @@ export class AntFarmSimulation {
                 if (hasReachedFood(ant, this.food)) {
                     this.recordTunnelPoint(ant, true);
                     ant.state = RETURNING;
-                    ant.routeIndex = this.tunnel.length - 2;
+                    ant.route = this.scoutPath;
+                    ant.routeIndex = this.scoutPath.length - 2;
+                    ant.routeDirection = -1;
                     this.collectFood();
                 }
             } else if (ant.state === FORAGING) {
-                const reachedFood = moveAntAlongTunnel(ant, this.tunnel, stepDistance, 1);
+                if (!ant.route) this.planTunnelRoute(ant, this.food);
+
+                const reachedFood = ant.route
+                    ? moveAntAlongTunnel(ant, ant.route, stepDistance, 1)
+                    : false;
+                if (reachedFood) ant.route = null;
+
+                if (!ant.route && !hasReachedFood(ant, this.food)) {
+                    moveAntToward(ant, this.food, stepDistance);
+                }
+
                 if (reachedFood && hasReachedFood(ant, this.food)) {
                     ant.state = RETURNING;
-                    ant.routeIndex = this.tunnel.length - 2;
+                    ant.route = null;
                     this.collectFood();
                 }
             } else if (ant.state === RETURNING) {
-                const reachedNest = this.tunnel.length > 1
-                    ? moveAntAlongTunnel(ant, this.tunnel, stepDistance, -1)
+                if (!ant.route && ant.isScout && !this.tunnelEstablished) {
+                    ant.route = this.scoutPath;
+                    ant.routeIndex = this.scoutPath.length - 2;
+                    ant.routeDirection = -1;
+                } else if (!ant.route) {
+                    this.planTunnelRoute(ant, this.nest);
+                }
+
+                const reachedNest = ant.route
+                    ? moveAntAlongTunnel(ant, ant.route, stepDistance, ant.routeDirection ?? 1)
                     : this.moveAntHome(ant, stepDistance);
 
                 if (reachedNest) this.antReturned(ant);
@@ -98,7 +121,8 @@ export class AntFarmSimulation {
             nest: this.nest,
             food: this.food,
             ants: this.ants,
-            tunnel: this.tunnel,
+            tunnelSegments: this.tunnelNetwork.getSegments(),
+            scoutPath: this.tunnelEstablished || this.needsNewTunnel ? [] : this.scoutPath,
             tunnelEstablished: this.tunnelEstablished,
             soilGrains: this.soilGrains,
         });
@@ -123,17 +147,34 @@ export class AntFarmSimulation {
             heading: directionToFood,
             wanderAngle: 0,
             isScout,
-            routeIndex: this.tunnelEstablished ? 1 : undefined,
+            route: null,
+            routeIndex: undefined,
+            routeDirection: 1,
         };
     }
 
     recordTunnelPoint(ant, force = false) {
-        const lastPoint = this.tunnel[this.tunnel.length - 1];
+        const lastPoint = this.scoutPath[this.scoutPath.length - 1];
         if (Math.hypot(ant.x - lastPoint.x, ant.y - lastPoint.y) >= TUNNEL_POINT_SPACING || force) {
             if (Math.hypot(ant.x - lastPoint.x, ant.y - lastPoint.y) > 0.5) {
-                this.tunnel.push({ x: ant.x, y: ant.y });
+                this.scoutPath.push({ x: ant.x, y: ant.y });
             }
         }
+    }
+
+    planTunnelRoute(ant, destination) {
+        const startId = this.tunnelNetwork.connectNearest({ x: ant.x, y: ant.y });
+        const destinationId = this.tunnelNetwork.connectNearest(destination);
+        const route = this.tunnelNetwork.findRoute(startId, destinationId);
+        if (!route) return;
+
+        if (Math.hypot(route[0].x - ant.x, route[0].y - ant.y) > 0.5) {
+            route.unshift({ x: ant.x, y: ant.y });
+        }
+
+        ant.route = route;
+        ant.routeIndex = route.length > 1 ? 1 : 0;
+        ant.routeDirection = 1;
     }
 
     collectFood() {
@@ -149,10 +190,9 @@ export class AntFarmSimulation {
         this.ants.forEach((ant) => {
             if (ant.state === FORAGING || ant.state === SEARCHING) {
                 ant.state = RETURNING;
-                ant.routeIndex = Math.min(
-                    Math.max((ant.routeIndex ?? 1) - 1, 0),
-                    this.tunnel.length - 2
-                );
+                ant.route = null;
+                ant.routeIndex = undefined;
+                ant.routeDirection = 1;
             }
         });
     }
@@ -164,29 +204,34 @@ export class AntFarmSimulation {
 
     antReturned(ant) {
         if (ant.isScout && !this.tunnelEstablished && !this.needsNewTunnel) {
+            this.tunnelNetwork.addPath(this.scoutPath);
             this.tunnelEstablished = true;
             this.ants.forEach((waitingAnt) => {
                 if (waitingAnt.state === WAITING) {
                     waitingAnt.state = FORAGING;
-                    waitingAnt.routeIndex = 1;
+                    waitingAnt.route = null;
+                    waitingAnt.routeIndex = undefined;
                 }
             });
         }
 
         ant.state = this.tunnelEstablished ? FORAGING : WAITING;
-        ant.routeIndex = this.tunnelEstablished ? 1 : undefined;
+        ant.route = null;
+        ant.routeIndex = undefined;
+        ant.routeDirection = 1;
     }
 
     finishNewSearchIfReady() {
         if (!this.needsNewTunnel || this.ants.some((ant) => ant.state === RETURNING)) return;
 
         this.food = createFoodSource(this.width, this.height, this.nest, this.food.maxAmount, this.food);
-        this.tunnel = [{ x: this.nest.x, y: this.nest.y }];
+        this.scoutPath = [{ x: this.nest.x, y: this.nest.y }];
         this.tunnelEstablished = false;
         this.needsNewTunnel = false;
 
         this.ants.forEach((ant) => {
             ant.state = WAITING;
+            ant.route = null;
             ant.routeIndex = undefined;
         });
 
