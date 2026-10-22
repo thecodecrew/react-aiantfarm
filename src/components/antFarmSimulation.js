@@ -8,7 +8,7 @@ const RETURNING = 'returning';
 const SEARCHING = 'searching';
 const WAITING = 'waiting';
 const TUNNEL_POINT_SPACING = 4;
-const TUNNEL_LIFETIME_MS = 120_000;
+const TUNNEL_LIFETIME_MS = 60_000;
 const TUNNEL_CLEANUP_INTERVAL_MS = 5_000;
 
 export class AntFarmSimulation {
@@ -75,9 +75,8 @@ export class AntFarmSimulation {
                 if (hasReachedFood(ant, this.food)) {
                     this.recordTunnelPoint(ant, true);
                     ant.state = RETURNING;
-                    ant.route = null;
-                    ant.routeIndex = undefined;
-                    ant.routeDirection = 1;
+                    const path = this.tunnelNetwork.addPath(this.scoutPath, this.simulationTime);
+                    this.planTunnelRoute(ant, this.nest, path.endId);
                     this.collectFood();
                 }
             } else if (ant.state === FORAGING) {
@@ -137,18 +136,13 @@ export class AntFarmSimulation {
         const isScout = this.scoutAntId === null;
         if (isScout) this.scoutAntId = id;
 
-        const directionToFood = Math.atan2(
-            this.food.y - this.nest.y,
-            this.food.x - this.nest.x
-        );
-
         return {
             id,
             x: this.nest.x,
             y: this.nest.y,
             state: isScout ? SEARCHING : this.tunnelEstablished ? FORAGING : WAITING,
             speed: 0.42 + Math.random() * 0.18,
-            heading: directionToFood,
+            heading: Math.random() * Math.PI * 2,
             wanderAngle: 0,
             isScout,
             route: null,
@@ -166,8 +160,8 @@ export class AntFarmSimulation {
         }
     }
 
-    planTunnelRoute(ant, destination) {
-        const startId = this.tunnelNetwork.connectNearest({ x: ant.x, y: ant.y });
+    planTunnelRoute(ant, destination, startNodeId = null) {
+        const startId = startNodeId ?? this.tunnelNetwork.connectNearest({ x: ant.x, y: ant.y });
         const destinationId = this.tunnelNetwork.connectNearest(destination);
         const route = this.tunnelNetwork.findRoute(startId, destinationId);
 
@@ -219,7 +213,6 @@ export class AntFarmSimulation {
 
     antReturned(ant) {
         if (ant.isScout && !this.tunnelEstablished && !this.needsNewTunnel) {
-            this.tunnelNetwork.addPath(this.scoutPath, this.simulationTime);
             this.tunnelEstablished = true;
             this.ants.forEach((waitingAnt) => {
                 if (waitingAnt.state === WAITING) {
@@ -253,7 +246,7 @@ export class AntFarmSimulation {
         const scout = this.ants.find((ant) => ant.id === this.scoutAntId) ?? this.ants[0];
         if (scout) {
             scout.state = SEARCHING;
-            scout.heading = Math.atan2(this.food.y - scout.y, this.food.x - scout.x);
+            scout.heading = Math.random() * Math.PI * 2;
             scout.wanderAngle = 0;
         }
     }
