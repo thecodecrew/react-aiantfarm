@@ -108,7 +108,7 @@ const drawFood = (ctx, food) => {
 
 const drawAnts = (ctx, ants) => {
     ants.forEach((ant) => {
-        ctx.fillStyle = ant.state === 'returning' ? '#ef4444' : ant.state === 'waiting' ? '#a3a3a3' : '#ffffff';
+        ctx.fillStyle = ant.hasFood ? '#ef4444' : ant.state === 'waiting' ? '#a3a3a3' : '#ffffff';
         ctx.fillRect(ant.x, ant.y, 2, 2);
     });
 };
