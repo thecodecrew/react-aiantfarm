@@ -75,6 +75,7 @@ export class AntFarmSimulation {
                 if (hasReachedFood(ant, this.food)) {
                     this.recordTunnelPoint(ant, true);
                     ant.state = RETURNING;
+                    ant.hasFood = true;
                     const path = this.tunnelNetwork.addPath(this.scoutPath, this.simulationTime);
                     this.planTunnelRoute(ant, this.nest, path.endId);
                     this.collectFood();
@@ -93,6 +94,7 @@ export class AntFarmSimulation {
 
                 if (reachedFood && hasReachedFood(ant, this.food)) {
                     ant.state = RETURNING;
+                    ant.hasFood = true;
                     ant.route = null;
                     this.collectFood();
                 }
@@ -148,6 +150,7 @@ export class AntFarmSimulation {
             route: null,
             routeIndex: undefined,
             routeDirection: 1,
+            hasFood: false,
         };
     }
 
@@ -212,6 +215,8 @@ export class AntFarmSimulation {
     }
 
     antReturned(ant) {
+        ant.hasFood = false;
+
         if (ant.isScout && !this.tunnelEstablished && !this.needsNewTunnel) {
             this.tunnelEstablished = true;
             this.ants.forEach((waitingAnt) => {
