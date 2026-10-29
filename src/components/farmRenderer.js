@@ -1,3 +1,11 @@
+import { ANT_TYPES } from './ant.js';
+
+const ANT_VISUALS = {
+    [ANT_TYPES.FORAGER]: { color: '#d6a15e', label: 'Forager' },
+    [ANT_TYPES.SCOUT]: { color: '#b85c38', label: 'Scout' },
+    [ANT_TYPES.DEFENDER]: { color: '#6b2f22', label: 'Defender' },
+};
+
 const drawSoilBed = (ctx, width, height, soilGrains) => {
     const soil = ctx.createLinearGradient(0, 0, 0, height);
     soil.addColorStop(0, '#765a3b');
@@ -106,10 +114,62 @@ const drawFood = (ctx, food) => {
     ctx.fillText(`Food ${food.amount}`, food.x - 22, food.y + food.radius + 16);
 };
 
+const drawAntGlyph = (ctx, x, y, type, radius = 3.5) => {
+    ctx.beginPath();
+    if (type === ANT_TYPES.SCOUT) {
+        ctx.moveTo(x, y - radius);
+        ctx.lineTo(x + radius, y);
+        ctx.lineTo(x, y + radius);
+        ctx.lineTo(x - radius, y);
+        ctx.closePath();
+    } else if (type === ANT_TYPES.DEFENDER) {
+        ctx.moveTo(x, y - radius);
+        ctx.lineTo(x + radius, y + radius);
+        ctx.lineTo(x - radius, y + radius);
+        ctx.closePath();
+    } else {
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    if (type === ANT_TYPES.DEFENDER) {
+        ctx.strokeStyle = '#d8b27a';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+};
+
 const drawAnts = (ctx, ants) => {
     ants.forEach((ant) => {
-        ctx.fillStyle = ant.hasFood ? '#ef4444' : ant.state === 'waiting' ? '#a3a3a3' : '#ffffff';
-        ctx.fillRect(ant.x, ant.y, 2, 2);
+        const visual = ANT_VISUALS[ant.type] ?? ANT_VISUALS[ANT_TYPES.FORAGER];
+        ctx.fillStyle = visual.color;
+        drawAntGlyph(ctx, ant.x, ant.y, ant.type);
+
+        if (ant.hasFood) {
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(ant.x + 4, ant.y - 4, 1.8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+};
+
+const drawAntLegend = (ctx, width) => {
+    const x = width - 224;
+    ctx.fillStyle = 'rgba(20, 25, 20, 0.82)';
+    ctx.fillRect(x, 12, 212, 26);
+    ctx.font = '11px sans-serif';
+    ctx.textBaseline = 'middle';
+
+    [
+        { type: ANT_TYPES.FORAGER, x: x + 12 },
+        { type: ANT_TYPES.SCOUT, x: x + 81 },
+        { type: ANT_TYPES.DEFENDER, x: x + 140 },
+    ].forEach(({ type, x: markerX }) => {
+        const visual = ANT_VISUALS[type];
+        ctx.fillStyle = visual.color;
+        drawAntGlyph(ctx, markerX, 25, type, 3);
+        ctx.fillStyle = '#f3f4f6';
+        ctx.fillText(visual.label, markerX + 8, 25);
     });
 };
 
@@ -127,4 +187,5 @@ export const renderFarm = (ctx, { width, height, nest, food, ants, tunnelSegment
     drawNest(ctx, nest);
     drawFood(ctx, food);
     drawAnts(ctx, ants);
+    drawAntLegend(ctx, width);
 };
