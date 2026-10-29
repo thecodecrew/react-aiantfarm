@@ -2,11 +2,13 @@ import { moveAntAlongTunnel, moveAntToward, moveAntSearching } from './antMoveme
 import { createFoodSource, hasReachedFood, hasDetectedFood } from './foodMechanics.js';
 import { createSoilGrains, renderFarm } from './farmRenderer.js';
 import { TunnelNetwork } from './tunneling.js';
+import { Ant, ANT_TYPES } from './ant.js';
 
 const FORAGING = 'foraging';
 const RETURNING = 'returning';
 const SEARCHING = 'searching';
 const WAITING = 'waiting';
+const DEFENDING = 'defending';
 const TUNNEL_POINT_SPACING = 4;
 const TUNNEL_LIFETIME_MS = 60_000;
 const TUNNEL_CLEANUP_INTERVAL_MS = 5_000;
@@ -23,6 +25,7 @@ export class AntFarmSimulation {
     needsNewTunnel = false;
     scoutAntId = null;
     nextTunnelCleanupTime = 0;
+    attackedEnemies = new WeakSet();
 
     constructor(width, height, maxAnts = 5, foodAmount = 80) {
         this.width = width;
@@ -63,7 +66,9 @@ export class AntFarmSimulation {
         this.ants.forEach((ant) => {
             const stepDistance = ant.speed * speedMultiplier;
 
-            if (ant.state === SEARCHING) {
+            if (ant.type === ANT_TYPES.DEFENDER && ant.targetEnemy) {
+                this.updateDefender(ant, stepDistance);
+            } else if (ant.state === SEARCHING) {
                 if (hasDetectedFood(ant, this.food)) {
                     moveAntToward(ant, this.food, stepDistance);
                 } else {
@@ -133,25 +138,52 @@ export class AntFarmSimulation {
         });
     }
 
-    createAnt() {
+    createAnt(type = null) {
         const id = this.nextAntId++;
-        const isScout = this.scoutAntId === null;
+        const isScout = type ? type === ANT_TYPES.SEARCHER : this.scoutAntId === null;
+        const antType = type ?? (isScout ? ANT_TYPES.SEARCHER : ANT_TYPES.FORAGER);
         if (isScout) this.scoutAntId = id;
 
-        return {
+        return new Ant({
             id,
             x: this.nest.x,
             y: this.nest.y,
-            state: isScout ? SEARCHING : this.tunnelEstablished ? FORAGING : WAITING,
+            type: antType,
+            state: antType === ANT_TYPES.DEFENDER
+                ? DEFENDING
+                : isScout ? SEARCHING : this.tunnelEstablished ? FORAGING : WAITING,
             speed: 0.42 + Math.random() * 0.18,
             heading: Math.random() * Math.PI * 2,
-            wanderAngle: 0,
             isScout,
-            route: null,
-            routeIndex: undefined,
-            routeDirection: 1,
-            hasFood: false,
-        };
+        });
+    }
+
+    onForagerAttacked(forager, enemy) {
+        if (forager.type !== ANT_TYPES.FORAGER || !enemy || typeof enemy !== 'object') return null;
+        if (this.attackedEnemies.has(enemy)) return null;
+
+        this.attackedEnemies.add(enemy);
+        const defender = this.createAnt(ANT_TYPES.DEFENDER);
+        defender.targetEnemy = enemy;
+        this.ants.push(defender);
+        return defender;
+    }
+
+    updateDefender(defender, stepDistance) {
+        const enemy = defender.targetEnemy;
+        if (enemy.isAlive === false || enemy.health <= 0) {
+            defender.targetEnemy = null;
+            defender.state = RETURNING;
+            defender.route = null;
+            return;
+        }
+
+        const distanceToEnemy = Math.hypot(enemy.x - defender.x, enemy.y - defender.y);
+        if (distanceToEnemy <= defender.attackRange) {
+            defender.attackEnemy(enemy, this.simulationTime);
+        } else {
+            moveAntToward(defender, enemy, stepDistance);
+        }
     }
 
     recordTunnelPoint(ant, force = false) {
@@ -169,6 +201,7 @@ export class AntFarmSimulation {
         const route = this.tunnelNetwork.findRoute(startId, destinationId);
 
         if (!route) {
+            this.tunnelNetwork.addPath([{ x: ant.x, y: ant.y }, destination], this.simulationTime);
             ant.route = [{ x: ant.x, y: ant.y }, { x: destination.x, y: destination.y }];
             ant.routeIndex = 1;
             ant.routeDirection = 1;
@@ -181,6 +214,7 @@ export class AntFarmSimulation {
 
         const lastWaypoint = route[route.length - 1];
         if (Math.hypot(lastWaypoint.x - destination.x, lastWaypoint.y - destination.y) > 0.5) {
+            this.tunnelNetwork.addPath([lastWaypoint, destination], this.simulationTime);
             route.push({ x: destination.x, y: destination.y });
         }
 
@@ -228,7 +262,7 @@ export class AntFarmSimulation {
             });
         }
 
-        ant.state = this.tunnelEstablished ? FORAGING : WAITING;
+        ant.state = ant.type === ANT_TYPES.DEFENDER || !this.tunnelEstablished ? WAITING : FORAGING;
         ant.route = null;
         ant.routeIndex = undefined;
         ant.routeDirection = 1;
