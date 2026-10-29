@@ -140,8 +140,8 @@ export class AntFarmSimulation {
 
     createAnt(type = null) {
         const id = this.nextAntId++;
-        const isScout = type ? type === ANT_TYPES.SEARCHER : this.scoutAntId === null;
-        const antType = type ?? (isScout ? ANT_TYPES.SEARCHER : ANT_TYPES.FORAGER);
+        const isScout = type ? type === ANT_TYPES.SCOUT : this.scoutAntId === null;
+        const antType = type ?? (isScout ? ANT_TYPES.SCOUT : ANT_TYPES.FORAGER);
         if (isScout) this.scoutAntId = id;
 
         return new Ant({
