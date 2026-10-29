@@ -119,7 +119,7 @@ export class AntFarmSimulation {
         this.finishNewSearchIfReady();
 
         if (this.simulationTime >= this.nextTunnelCleanupTime) {
-            this.tunnelNetwork.pruneExpired(this.simulationTime, TUNNEL_LIFETIME_MS);
+            this.tunnelNetwork.pruneExpired(this.simulationTime, TUNNEL_LIFETIME_MS, this.ants);
             this.nextTunnelCleanupTime = this.simulationTime + TUNNEL_CLEANUP_INTERVAL_MS;
         }
     }

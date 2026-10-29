@@ -78,6 +78,16 @@ const getSegmentIntersection = (start, end, edgeStart, edgeEnd) => {
 
 const getDistance = (first, second) => Math.hypot(first.x - second.x, first.y - second.y);
 
+const getDistanceToSegment = (point, start, end) => {
+    const deltaX = end.x - start.x;
+    const deltaY = end.y - start.y;
+    const lengthSquared = deltaX * deltaX + deltaY * deltaY;
+    const position = lengthSquared === 0
+        ? 0
+        : Math.max(0, Math.min(1, ((point.x - start.x) * deltaX + (point.y - start.y) * deltaY) / lengthSquared));
+    return getDistance(point, { x: start.x + position * deltaX, y: start.y + position * deltaY });
+};
+
 export class TunnelNetwork {
     nodes = new Map();
     nextNodeId = 1;
@@ -189,15 +199,23 @@ export class TunnelNetwork {
         return { startId, endId: currentId };
     }
 
-    pruneExpired(currentTime, lifetime) {
+    pruneExpired(currentTime, lifetime, ants = []) {
         let removedEdges = 0;
+        const hasAntOnTunnel = this.getEdges().some(({ startId, endId }) => {
+            const start = this.nodes.get(startId);
+            const end = this.nodes.get(endId);
+            return ants.some((ant) => ant.state !== 'waiting' && getDistanceToSegment(ant, start, end) <= 2);
+        });
+
+        if (hasAntOnTunnel) return 0;
 
         for (const node of this.nodes.values()) {
             for (const [neighborId, edge] of node.links) {
                 if (node.id >= neighborId || currentTime - edge.createdAt < lifetime) continue;
 
+                const neighbor = this.nodes.get(neighborId);
                 node.links.delete(neighborId);
-                this.nodes.get(neighborId)?.links.delete(node.id);
+                neighbor?.links.delete(node.id);
                 removedEdges += 1;
             }
         }
