@@ -1,6 +1,6 @@
 export const ANT_TYPES = Object.freeze({
     FORAGER: 'forager',
-    SEARCHER: 'searcher',
+    SCOUT: 'scout',
     DEFENDER: 'defender',
 });
 
