@@ -4,6 +4,7 @@ const ANT_VISUALS = {
     [ANT_TYPES.FORAGER]: { color: '#d6a15e', label: 'Forager' },
     [ANT_TYPES.SCOUT]: { color: '#b85c38', label: 'Scout' },
     [ANT_TYPES.DEFENDER]: { color: '#6b2f22', label: 'Defender' },
+    [ANT_TYPES.ENEMY]: { color: '#8f3a2a', label: 'Raider' },
 };
 
 const drawSoilBed = (ctx, width, height, soilGrains) => {
@@ -80,14 +81,14 @@ const drawTunnel = (ctx, tunnelSegments, scoutPath, established) => {
     ctx.restore();
 };
 
-const drawNest = (ctx, nest) => {
+const drawNest = (ctx, nest, isEnemy = false) => {
     const entranceRadius = 16;
-    ctx.fillStyle = '#3b82f6';
+    ctx.fillStyle = isEnemy ? '#8f3a2a' : '#3b82f6';
     ctx.beginPath();
     ctx.arc(nest.x, nest.y, entranceRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(21, 14, 10, 0.96)';
+    ctx.fillStyle = isEnemy ? 'rgba(30, 10, 8, 0.98)' : 'rgba(21, 14, 10, 0.96)';
     ctx.beginPath();
     ctx.arc(nest.x, nest.y, entranceRadius * 0.72, 0, Math.PI * 2);
     ctx.fill();
@@ -116,6 +117,16 @@ const drawFood = (ctx, food) => {
 
 const drawAntGlyph = (ctx, x, y, type, radius = 3.5) => {
     ctx.beginPath();
+    if (type === ANT_TYPES.ENEMY) {
+        ctx.moveTo(x - radius, y - radius);
+        ctx.lineTo(x + radius, y + radius);
+        ctx.moveTo(x + radius, y - radius);
+        ctx.lineTo(x - radius, y + radius);
+        ctx.strokeStyle = '#e3b18d';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        return;
+    }
     if (type === ANT_TYPES.SCOUT) {
         ctx.moveTo(x, y - radius);
         ctx.lineTo(x + radius, y);
@@ -138,8 +149,8 @@ const drawAntGlyph = (ctx, x, y, type, radius = 3.5) => {
     }
 };
 
-const drawAnts = (ctx, ants) => {
-    ants.forEach((ant) => {
+const drawAnts = (ctx, ants, enemyAnts) => {
+    const drawAnt = (ant) => {
         const visual = ANT_VISUALS[ant.type] ?? ANT_VISUALS[ANT_TYPES.FORAGER];
         ctx.fillStyle = visual.color;
         drawAntGlyph(ctx, ant.x, ant.y, ant.type);
@@ -150,20 +161,24 @@ const drawAnts = (ctx, ants) => {
             ctx.arc(ant.x + 4, ant.y - 4, 1.8, 0, Math.PI * 2);
             ctx.fill();
         }
-    });
+    };
+
+    ants.forEach(drawAnt);
+    enemyAnts.forEach(drawAnt);
 };
 
 const drawAntLegend = (ctx, width) => {
-    const x = width - 224;
+    const x = width - 302;
     ctx.fillStyle = 'rgba(20, 25, 20, 0.82)';
-    ctx.fillRect(x, 12, 212, 26);
+    ctx.fillRect(x, 12, 290, 26);
     ctx.font = '11px sans-serif';
     ctx.textBaseline = 'middle';
 
     [
         { type: ANT_TYPES.FORAGER, x: x + 12 },
-        { type: ANT_TYPES.SCOUT, x: x + 81 },
-        { type: ANT_TYPES.DEFENDER, x: x + 140 },
+        { type: ANT_TYPES.SCOUT, x: x + 76 },
+        { type: ANT_TYPES.DEFENDER, x: x + 132 },
+        { type: ANT_TYPES.ENEMY, x: x + 216 },
     ].forEach(({ type, x: markerX }) => {
         const visual = ANT_VISUALS[type];
         ctx.fillStyle = visual.color;
@@ -181,11 +196,24 @@ export const createSoilGrains = (width, height) =>
         color: Math.random() > 0.5 ? 'rgba(221, 184, 132, 0.2)' : 'rgba(30, 20, 13, 0.22)',
     }));
 
-export const renderFarm = (ctx, { width, height, nest, food, ants, tunnelSegments, scoutPath, tunnelEstablished, soilGrains }) => {
+export const renderFarm = (ctx, {
+    width,
+    height,
+    nest,
+    food,
+    ants,
+    enemyAnts = [],
+    enemyNest = null,
+    tunnelSegments,
+    scoutPath,
+    tunnelEstablished,
+    soilGrains,
+}) => {
     drawSoilBed(ctx, width, height, soilGrains);
     drawTunnel(ctx, tunnelSegments, scoutPath, tunnelEstablished);
     drawNest(ctx, nest);
+    if (enemyNest) drawNest(ctx, enemyNest, true);
     drawFood(ctx, food);
-    drawAnts(ctx, ants);
+    drawAnts(ctx, ants, enemyAnts);
     drawAntLegend(ctx, width);
 };
