@@ -201,19 +201,15 @@ export class TunnelNetwork {
 
     pruneExpired(currentTime, lifetime, ants = []) {
         let removedEdges = 0;
-        const hasAntOnTunnel = this.getEdges().some(({ startId, endId }) => {
-            const start = this.nodes.get(startId);
-            const end = this.nodes.get(endId);
-            return ants.some((ant) => ant.state !== 'waiting' && getDistanceToSegment(ant, start, end) <= 2);
-        });
-
-        if (hasAntOnTunnel) return 0;
-
         for (const node of this.nodes.values()) {
             for (const [neighborId, edge] of node.links) {
                 if (node.id >= neighborId || currentTime - edge.createdAt < lifetime) continue;
 
                 const neighbor = this.nodes.get(neighborId);
+                const hasAntOnEdge = ants.some((ant) =>
+                    ant.state !== 'waiting' && getDistanceToSegment(ant, node, neighbor) <= 2);
+                if (hasAntOnEdge) continue;
+
                 node.links.delete(neighborId);
                 neighbor?.links.delete(node.id);
                 removedEdges += 1;

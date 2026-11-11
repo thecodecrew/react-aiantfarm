@@ -38,6 +38,18 @@ export const moveAntAlongTunnel = (ant, tunnel, distance, direction) => {
     }
 
     let routeIndex = ant.routeIndex ?? (direction > 0 ? 1 : tunnel.length - 2);
+    if (!Number.isInteger(routeIndex) || routeIndex < 0 || routeIndex >= tunnel.length) {
+        const reachedEnd = direction > 0 ? routeIndex >= tunnel.length : routeIndex < 0;
+        if (reachedEnd) {
+            const destination = tunnel[direction > 0 ? tunnel.length - 1 : 0];
+            ant.x = destination.x;
+            ant.y = destination.y;
+            ant.routeIndex = direction > 0 ? tunnel.length : -1;
+            return true;
+        }
+        routeIndex = direction > 0 ? 1 : tunnel.length - 2;
+    }
+
     let remainingDistance = distance;
 
     while (remainingDistance > 0 && routeIndex >= 0 && routeIndex < tunnel.length) {
@@ -76,4 +88,3 @@ export const moveAntSearching = (ant, width, height, distance) => {
     ant.x = clamp(ant.x + Math.cos(ant.heading) * distance, margin, width - margin);
     ant.y = clamp(ant.y + Math.sin(ant.heading) * distance, margin, height - margin);
 };
-

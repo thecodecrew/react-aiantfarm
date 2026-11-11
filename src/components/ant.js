@@ -2,6 +2,7 @@ export const ANT_TYPES = Object.freeze({
     FORAGER: 'forager',
     SCOUT: 'scout',
     DEFENDER: 'defender',
+    ENEMY: 'enemy',
 });
 
 export class Ant {
@@ -21,17 +22,27 @@ export class Ant {
         this.hasFood = false;
         this.targetEnemy = null;
         this.attackDamage = 1;
-        this.attackRange = 8;
+        this.attackRange = type === ANT_TYPES.ENEMY ? 5 : 8;
         this.attackCooldown = 750;
         this.lastAttackTime = -Infinity;
+        this.health = 3;
+        this.isAlive = true;
     }
 
     attackEnemy(enemy, currentTime) {
-        if (typeof enemy.takeDamage !== 'function') return false;
+        if (enemy.isAlive === false || typeof enemy.takeDamage !== 'function') return false;
         if (currentTime - this.lastAttackTime < this.attackCooldown) return false;
 
         enemy.takeDamage(this.attackDamage, this);
         this.lastAttackTime = currentTime;
         return true;
+    }
+
+    takeDamage(damage) {
+        if (!this.isAlive) return false;
+
+        this.health = Math.max(0, this.health - damage);
+        this.isAlive = this.health > 0;
+        return this.isAlive;
     }
 }
